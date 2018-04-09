@@ -76,7 +76,7 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 
 	// make a signal to wait for one bootstrap round to complete.
 	doneWithRound := make(chan struct{})
-
+	fmt.Println("bootstrap.go->Bootstrap,make a signal doneWithRound to wait for one bootstrap round to complete")
 	// the periodic bootstrap function -- the connection supervisor
 	periodic := func(worker goprocess.Process) {
 		ctx := procctx.OnClosingContext(worker)
@@ -87,7 +87,8 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 			log.Debugf("%s bootstrap error: %s", n.Identity, err)
 		}
 
-		<-doneWithRound
+		var signal = <-doneWithRound
+		fmt.Println(fmt.Sprintf("bootstrap.go->Bootstrap,received signal of channel:%s", signal))
 	}
 
 	// kick off the node's periodic bootstrapping
@@ -104,6 +105,7 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 	}
 
 	doneWithRound <- struct{}{}
+	fmt.Println(fmt.Sprintf("bootstrap.go->Bootstrap,send signal to channel:struct{}{}"))
 	close(doneWithRound) // it no longer blocks periodic
 	return proc, nil
 }
@@ -117,6 +119,16 @@ func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) er
 	// get bootstrap peers from config. retrieving them here makes
 	// sure we remain observant of changes to client configuration.
 	peers := cfg.BootstrapPeers()
+
+	for _, p := range peers {
+		tmpstr := p.ID.Pretty()
+		if len(p.Addrs) > 0 {
+			for _, addr := range p.Addrs {
+				tmpstr += "\n" + addr.String()
+			}
+			fmt.Println("bootstrap.go->bootstrapRound, get bootstrap peers from config：" + tmpstr)
+		}
+	}
 
 	// determine how many bootstrap connections to open
 	connected := host.Network().Peers()
